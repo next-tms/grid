@@ -1,0 +1,14 @@
+module Overture
+  class Record < ApplicationRecord
+    include DataFile
+
+    class << self
+      def releases = Release
+      def schema = Schema
+    end
+
+    self.abstract_class = true
+
+    connects_to database: { reading: :overture, writing: :overture }
+  end
+end

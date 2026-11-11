@@ -1,0 +1,11 @@
+zh_cn:
+  activerecord:
+    attributes:
+      country:
+        iso3166_1_alpha2: ISO 3166-1 Alpha-2
+        iso3166_1_alpha3: ISO 3166-1 Alpha-3
+        un_m49: UN M49
+    models:
+      country:
+        one: 国
+        other: 国

@@ -1,0 +1,135 @@
+airport:
+  google: [airport]
+  open_street_map: [aeroway=aerodrome]
+  overture: [air_transport_facility_or_service, airport]
+amusement_park:
+  google: [amusement_park, water_park]
+  open_street_map: [tourism=theme_park]
+  overture: [amusement_park]
+athletic_facility:
+  google: [arena, athletic_field, sports_complex, stadium]
+  open_street_map: [leisure=ice_rink, leisure=pitch, leisure=sports_centre, leisure=stadium, leisure=track]
+  overture: [skating_rink, sport_court, sport_field, sports_complex, stadium_arena]
+brewery:
+  google: [brewery]
+  open_street_map: [craft=brewery]
+  overture: [brewery]
+cemetery:
+  google: [cemetery]
+  open_street_map: [amenity=grave_yard, landuse=cemetery]
+  overture: [cemetery]
+church:
+  google: [church, hindu_temple, mosque, place_of_worship, synagogue]
+  open_street_map: [amenity=place_of_worship]
+  overture:
+    - buddhist_place_of_worship
+    - christian_place_of_worship
+    - hindu_place_of_worship
+    - jewish_place_of_worship
+    - muslim_place_of_worship
+    - place_of_worship
+convention:
+  google: [convention_center, event_venue]
+  open_street_map: [amenity=conference_centre, amenity=events_venue, amenity=exhibition_centre]
+  overture: [civic_center, event_venue]
+fair:
+  google: []
+  open_street_map: []
+  overture: [fairgrounds, festival_venue, rodeo]
+farm:
+  google: [farm]
+  open_street_map: [landuse=farmyard, place=farm]
+  overture: [farm]
+fitness_center:
+  google: [fitness_center, gym]
+  open_street_map: [leisure=fitness_centre]
+  overture: [fitness_studio, gym, sport_or_fitness_facility]
+golf_course:
+  google: [golf_course]
+  open_street_map: [leisure=golf_course]
+  overture: [country_club, golf_course]
+government:
+  google: [city_hall, courthouse, embassy, fire_station, government_office, local_government_office, police, post_office]
+  open_street_map: [amenity=courthouse, amenity=fire_station, amenity=police, amenity=post_office, amenity=townhall, office=diplomatic, office=government]
+  overture: [courthouse, embassy, fire_station, government_department, government_office, police_station, school_district_office]
+grocery_store:
+  google: [grocery_store, supermarket, warehouse_store]
+  open_street_map: [shop=greengrocer, shop=supermarket]
+  overture: [food_and_beverage_store, superstore, warehouse_club_store]
+hospital:
+  google: [general_hospital, hospital]
+  open_street_map: [amenity=hospital, healthcare=hospital]
+  overture: [emergency_department, general_hospital, hospital, specialty_hospital]
+hotel:
+  google: [bed_and_breakfast, guest_house, hotel, inn, lodging]
+  open_street_map: [tourism=guest_house, tourism=hostel, tourism=hotel]
+  overture: [bed_and_breakfast, hotel, inn, lodging]
+mall:
+  google: [shopping_mall]
+  open_street_map: [shop=mall]
+  overture: [shopping_mall]
+marina:
+  google: [marina]
+  open_street_map: [leisure=marina]
+  overture: [marina]
+military_site:
+  google: []
+  open_street_map: [landuse=military, military=barracks, military=base]
+  overture: [military_base, military_site]
+motel:
+  google: [motel]
+  open_street_map: [tourism=motel]
+  overture: []
+nursing_home:
+  google: [nursing_home]
+  open_street_map: [amenity=nursing_home, healthcare=nursing_home]
+  overture: [senior_living_facility]
+park:
+  google: [dog_park, national_park, park, state_park]
+  open_street_map: [leisure=dog_park, leisure=nature_reserve, leisure=park]
+  overture: [dog_park, national_park, nature_reserve, park, skate_park]
+prison:
+  google: [prison]
+  open_street_map: [amenity=prison]
+  overture: [jail_or_prison]
+resort:
+  google: [resort_hotel]
+  open_street_map: [leisure=resort]
+  overture: [resort]
+restaurant:
+  google: [bakery, bar, cafe, coffee_shop, fast_food_restaurant, food_court, meal_takeaway, pub, restaurant, wine_bar]
+  open_street_map: [amenity=bar, amenity=biergarten, amenity=cafe, amenity=fast_food, amenity=food_court, amenity=ice_cream, amenity=pub, amenity=restaurant]
+  overture:
+    - alcoholic_beverage_venue
+    - bar
+    - cafe
+    - casual_eatery
+    - coffee_shop
+    - fast_food_restaurant
+    - food_and_drink
+    - food_court
+    - food_truck_stand
+    - lounge
+    - non_alcoholic_beverage_venue
+    - restaurant
+    - smoothie_juice_bar
+school:
+  google: [preschool, primary_school, school, secondary_school]
+  open_street_map: [amenity=kindergarten, amenity=school]
+  overture: [academy, educational_facility, elementary_school, high_school, kindergarten, middle_school, preschool, specialty_school]
+storage_facility:
+  google: [storage]
+  open_street_map: [shop=storage_rental]
+  overture: [storage_facility]
+university:
+  google: [university]
+  open_street_map: [amenity=college, amenity=university]
+  overture: [college_university]
+utility_site:
+  google: []
+  open_street_map: [man_made=wastewater_plant, man_made=water_works, power=plant, power=substation]
+  overture: [utility_energy_infrastructure]
+winery:
+  google: [winery]
+  open_street_map: [craft=winery]
+  overture: [winery]

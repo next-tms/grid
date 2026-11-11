@@ -1,0 +1,33 @@
+{
+  "places": [
+    {
+      "id": "ChIJtest-address-1600",
+      "location": { "latitude": 37.4220094, "longitude": -122.0847516 },
+      "types": ["premise", "street_address"],
+      "formattedAddress": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+      "displayName": { "text": "1600 Amphitheatre Pkwy", "languageCode": "en" }
+    },
+    {
+      "id": "ChIJtest-googleplex",
+      "location": { "latitude": 37.4219999, "longitude": -122.0840575 },
+      "types": ["corporate_office", "establishment", "point_of_interest"],
+      "formattedAddress": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+      "businessStatus": "OPERATIONAL",
+      "displayName": { "text": "Googleplex", "languageCode": "en" }
+    },
+    {
+      "id": "ChIJtest-closed-cafe",
+      "types": ["cafe", "establishment", "food", "point_of_interest"],
+      "formattedAddress": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+      "businessStatus": "CLOSED_PERMANENTLY",
+      "displayName": { "text": "Closed Cafe", "languageCode": "en" }
+    },
+    {
+      "id": "ChIJtest-elsewhere",
+      "types": ["cafe", "establishment", "food", "point_of_interest"],
+      "formattedAddress": "1 Main St, Mountain View, CA 94041, USA",
+      "businessStatus": "OPERATIONAL",
+      "displayName": { "text": "Elsewhere Cafe", "languageCode": "en" }
+    }
+  ]
+}

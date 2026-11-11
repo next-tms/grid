@@ -1,0 +1,48 @@
+name: Push
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+  push:
+    name: Push
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: fly-deploy-grid
+      cancel-in-progress: false
+    env:
+      IMAGE_LABEL: deployment-${{ github.sha }}
+      DATA_IMAGE: ghcr.io/next-tms/grid-data
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: Find the grid-data image
+        id: data
+        run: |
+          version=$(bin/rails data:version)
+          if digest=$(docker buildx imagetools inspect "$DATA_IMAGE:$version" --format '{{json .Manifest}}' | jq -er .digest); then
+            echo "image=$DATA_IMAGE@$digest" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No grid-data image $version yet, so this deploy has no data files."
+            echo "image=no-data" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+      - run: >-
+          flyctl deploy --build-only --push --remote-only --image-label "$IMAGE_LABEL"
+          --build-arg "DATA_IMAGE=${{ steps.data.outputs.image }}"
+      - run: flyctl deploy --image "registry.fly.io/grid:$IMAGE_LABEL"
+      - name: Tag deployed image as main
+        run: |
+          flyctl auth docker
+          docker buildx imagetools create -t registry.fly.io/grid:main "registry.fly.io/grid:$IMAGE_LABEL"

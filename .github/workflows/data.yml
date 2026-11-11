@@ -1,0 +1,76 @@
+name: Data
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - app/services/address_key.rb
+      - app/services/address_normalizer.rb
+      - app/services/geo_names/schema.rb
+      - app/services/overture/schema.rb
+      - config/usps_publication_28.yml
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: grid-data
+  cancel-in-progress: false
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    outputs:
+      built: ${{ steps.plan.outputs.builds != '' }}
+    env:
+      DATA_DIR: ${{ runner.temp }}/data
+      DATA_IMAGE: ghcr.io/next-tms/grid-data
+      DUCKDB_VERSION: 1.4.1
+      GEO_NAMES_DATABASE: ${{ runner.temp }}/data/geo_names.sqlite3
+      OVERTURE_DATABASE: ${{ runner.temp }}/data/overture.sqlite3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: Plan the image
+        id: plan
+        run: |
+          mkdir -p "$DATA_DIR"
+          export PREVIOUS_IMAGE="$DATA_IMAGE:latest"
+          export PREVIOUS_LABELS=$(docker buildx imagetools inspect "$PREVIOUS_IMAGE" --format '{{json .Image}}' 2>/dev/null | jq -c '.config.Labels // {}')
+          [ -n "$PREVIOUS_LABELS" ] || PREVIOUS_LABELS='{}'
+          export GEO_NAMES_RELEASE=$(date -u +%Y-%m)
+          export OVERTURE_RELEASE=$(aws s3 ls --no-sign-request s3://overturemaps-us-west-2/release/ | awk '{ print $2 }' | tr -d / | sort | tail -n 1)
+          echo "geo_names_release=$GEO_NAMES_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "overture_release=$OVERTURE_RELEASE" >> "$GITHUB_OUTPUT"
+          bin/rails data:plan >> "$GITHUB_OUTPUT"
+          cat "$DATA_DIR/Dockerfile"
+      - if: steps.plan.outputs.builds != ''
+        name: Free disk space
+        run: sudo rm -rf /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android /usr/share/dotnet
+      - if: contains(steps.plan.outputs.builds, 'geo_names')
+        run: bin/rails "geo_names:build[${{ steps.plan.outputs.geo_names_release }}]"
+      - if: contains(steps.plan.outputs.builds, 'overture')
+        name: Install DuckDB
+        run: |
+          curl -fsSL -o duckdb.zip "https://github.com/duckdb/duckdb/releases/download/v$DUCKDB_VERSION/duckdb_cli-linux-amd64.zip"
+          sudo unzip -o duckdb.zip -d /usr/local/bin
+      - if: contains(steps.plan.outputs.builds, 'overture')
+        run: bin/rails "overture:build[${{ steps.plan.outputs.overture_release }}]"
+      - if: steps.plan.outputs.builds != ''
+        name: Push the image
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker buildx build "$DATA_DIR" --push -t "$DATA_IMAGE:latest" -t "$DATA_IMAGE:$VERSION"
+  push:
+    needs: build
+    if: needs.build.outputs.built == 'true'
+    uses: ./.github/workflows/push.yml
+    secrets: inherit

@@ -1,0 +1,49 @@
+# See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
+
+# Ignore git directory.
+/.git/
+
+# Ignore bundler config.
+/.bundle
+
+# Ignore all default key files.
+/config/master.key
+/config/credentials/*.key
+
+# Ignore Docker Compose data.
+/data/
+
+# Ignore the local data files.
+/db/geo_names.sqlite3*
+/db/overture.sqlite3*
+
+# Ignore all environment files.
+/.docker-compose.env
+/.env*
+!/.env.example
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore pidfiles, but keep the directory.
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+
+# Ignore AI agent files.
+**/AGENTS.md
+**/CLAUDE.local.md
+**/CLAUDE.md
+**/GEMINI.md
+/.aider*
+/.claude/
+/.codex/
+/.cursor/
+/.cursorrules
+/.gemini/
+/.github/copilot-instructions.md
+/.mcp.json
+/codex/

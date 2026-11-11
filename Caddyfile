@@ -1,0 +1,31 @@
+{
+	servers {
+		protocols h1 h2c
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+	auto_https off
+	admin off
+}
+
+:{$PORT} {
+	encode {
+		zstd better
+		br
+		gzip 6
+		minimum_length 1025
+	}
+	header -Server
+	header -Via
+
+	log {
+		output stdout
+		format json
+	}
+
+	reverse_proxy unix//{env.PUMA_SOCKET} {
+		transport http {
+			versions 1.1
+		}
+	}
+}

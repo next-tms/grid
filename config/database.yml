@@ -1,0 +1,47 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch('RAILS_MAX_THREADS', 3) %>
+
+geo_names: &geo_names
+  adapter: sqlite3
+  database: <%= ENV.fetch('GEO_NAMES_DATABASE', 'db/geo_names.sqlite3') %>
+  database_tasks: false
+  readonly: true
+
+overture: &overture
+  adapter: sqlite3
+  database: <%= ENV.fetch('OVERTURE_DATABASE', 'db/overture.sqlite3') %>
+  database_tasks: false
+  readonly: true
+
+development:
+  primary:
+    <<: *default
+    database: grid_development
+  geo_names:
+    <<: *geo_names
+  overture:
+    <<: *overture
+
+test:
+  primary:
+    <<: *default
+    database: grid_test
+  geo_names:
+    <<: *geo_names
+    database: tmp/geo_names_test.sqlite3
+    readonly: false
+  overture:
+    <<: *overture
+    database: tmp/overture_test.sqlite3
+    readonly: false
+
+production:
+  primary:
+    <<: *default
+    database: grid_production
+  geo_names:
+    <<: *geo_names
+  overture:
+    <<: *overture
