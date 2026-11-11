@@ -1,0 +1,20 @@
+[
+  {
+    "input_index": 0,
+    "city_states": [{ "city": "Bend", "state_abbreviation": "OR", "state": "Oregon", "mailable_city": true }],
+    "zipcodes": [
+      {
+        "zipcode": "97701",
+        "zipcode_type": "S",
+        "default_city": "Bend",
+        "county_fips": "41017",
+        "county_name": "Deschutes",
+        "state_abbreviation": "OR",
+        "state": "Oregon",
+        "latitude": 44.0848,
+        "longitude": -121.2969,
+        "precision": "Zip5"
+      }
+    ]
+  }
+]

@@ -1,0 +1,6 @@
+inherit_gem:
+  rubocop-next: rubocop.yml
+
+Rails/SkipsModelValidations:
+  AllowedMethods:
+    - insert_all
