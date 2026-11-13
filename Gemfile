@@ -49,8 +49,8 @@ gem 'csv', '~> 3.3'
 
 gem 'mobility', '~> 1.3.2'
 
-gem 'sentry-rails', '~> 6.6'
-gem 'sentry-ruby', '~> 6.6'
+gem 'sentry-rails', '~> 7.2'
+gem 'sentry-ruby', '~> 7.2'
 
 gem 'sqlite3', '~> 2.7'
 
