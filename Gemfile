@@ -85,5 +85,5 @@ group :test do
 
   gem 'factory_bot_rails'
   gem 'shoulda-matchers', '8.0.1'
-  gem 'webmock', '~> 3.18.1'
+  gem 'webmock', '~> 3.34.0'
 end
