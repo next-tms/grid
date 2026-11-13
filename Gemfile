@@ -70,7 +70,7 @@ group :development, :test do
   gem 'rubocop-next', '~> 1.0.11'
 
   gem 'dotenv-rails', '~> 3.1.2'
-  gem 'rspec-rails', '~> 8.0.5'
+  gem 'rspec-rails', '~> 8.1.0'
 end
 
 group :development do
