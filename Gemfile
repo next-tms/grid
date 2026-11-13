@@ -43,7 +43,7 @@ gem 'bootsnap', require: false
 gem 'graphql', '~> 2.6'
 gem 'graphiql-rails', '~> 1.10.5'
 
-gem 'ransack', '~> 4.4'
+gem 'ransack', '~> 6.1'
 
 gem 'csv', '~> 3.3'
 
