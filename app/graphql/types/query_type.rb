@@ -10,6 +10,10 @@ module Types
       argument :ids, [ID], required: true, description: 'IDs of the objects.'
     end
 
+    field :fetch_countries, [Types::CountryType], null: false, description: 'Fetches every country, or the country that a name finds.' do
+      argument :name, String, required: false, description: 'A country name, an unofficial name, or an ISO 3166-1 alpha-2 or alpha-3 code.'
+    end
+
     field :fetch_place, Types::PlaceType, null: true, description: 'Fetches a place by its Grid ID or a provider ID.' do
       argument :id, Types::IdentifierInputType, required: true, description: 'The place ID.'
     end
@@ -47,6 +51,8 @@ module Types
     def nodes(ids:)
       ids.map { |id| context.schema.object_from_id(id, context) }
     end
+
+    def fetch_countries(name: nil) = CountrySearch.new(name:).call
 
     def fetch_place(id:)
       place = id.provider ? Place.identified_by(provider: id.provider, value: id.value).first : Place.find_by(id: id.value)

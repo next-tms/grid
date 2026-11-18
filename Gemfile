@@ -45,9 +45,10 @@ gem 'graphql', '~> 2.6'
 
 gem 'ransack', '~> 6.1'
 
-gem 'csv', '~> 3.3'
-
+gem 'countries', '~> 8.1'
 gem 'mobility', '~> 1.3.2'
+
+gem 'csv', '~> 3.3'
 
 gem 'sentry-rails', '~> 7.2'
 gem 'sentry-ruby', '~> 7.2'

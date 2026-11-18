@@ -26,6 +26,60 @@ RSpec.describe(Types::QueryType) do
     allow(Providers).to(receive(:enabled).and_return(providers))
   end
 
+  describe 'fetchCountries' do
+    let(:countries) { result.dig(:data, :fetch_countries) }
+    let(:query) do
+      <<~GRAPHQL
+        query($name: String) {
+          fetchCountries(name: $name) {
+            alpha2 alpha3 name numeric postalCode postalCodeFormat postalCodeLabel
+            regions { abbreviation iso31662 name }
+          }
+        }
+      GRAPHQL
+    end
+
+    it { expect(countries.size).to(eq(ISO3166::Country.all.size)) }
+    it { expect(countries.filter_map { it[:postal_code_format] }).to(all(satisfy { Regexp.new("\\A(?:#{it})\\z") })) }
+
+    context 'with a name' do
+      let(:country) do
+        {
+          alpha2: 'US',
+          alpha3: 'USA',
+          name: 'United States of America',
+          numeric: 840,
+          postal_code: true,
+          postal_code_format: '(\\d{5})(?:[ \\-](\\d{4}))?',
+          postal_code_label: 'ZIP'
+        }
+      end
+      let(:variables) { { name: ' United States of America ' } }
+
+      it { expect(countries).to(contain_exactly(include(country))) }
+      it { expect(countries.first[:regions]).to(include({ abbreviation: 'TX', iso31662: 'US-TX', name: 'Texas' })) }
+    end
+
+    context 'with a country without a local postal code label' do
+      let(:format) { '[ABCEGHJKLMNPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z] ?\\d[ABCEGHJ-NPRSTV-Z]\\d' }
+      let(:variables) { { name: 'CA' } }
+
+      it { expect(countries.first).to(include(postal_code_format: format, postal_code_label: 'Postal code')) }
+    end
+
+    context 'with a country without postal codes' do
+      let(:variables) { { name: 'AE' } }
+
+      it { expect(countries.first).to(include(postal_code: false, postal_code_format: nil)) }
+    end
+
+    context 'with an unknown name' do
+      let(:variables) { { name: 'Atlantis' } }
+
+      it { expect(countries).to(eq([])) }
+    end
+  end
+
   describe 'fetchPlace' do
     let(:query) { "query($id: IdentifierInput!) { fetchPlace(id: $id) { #{place_fields} } }" }
     let(:variables) { { id: { provider:, value: id }.compact } }
