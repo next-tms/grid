@@ -2,6 +2,7 @@ module GeoNames
   module Schema
     class << self
       def define(connection)
+        connection.execute('PRAGMA journal_mode = DELETE')
         connection.create_table(:cities) do |t|
           t.string(:name)
           t.string(:country_code, null: false)

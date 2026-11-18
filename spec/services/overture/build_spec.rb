@@ -74,6 +74,30 @@ RSpec.describe(Overture::Build) do
       expect(Overture::Place.connection_db_config.database).to(end_with('tmp/overture_test.sqlite3'))
     end
 
+    context 'when the production configuration reads the file from a directory it cannot write' do
+      let(:adapter) { ActiveRecord::ConnectionAdapters::SQLite3Adapter.new(configuration) }
+      let(:configuration) do
+        Rails.application.config.database_configuration.dig('production', 'overture').merge('database' => path.to_s)
+      end
+      let(:directory) { Rails.root.join('tmp/overture_read_only') }
+      let(:path) { directory.join('overture.sqlite3') }
+
+      before do
+        FileUtils.mkdir_p(directory)
+        overture_build.call
+        FileUtils.chmod(0o555, directory)
+      end
+
+      after do
+        adapter.disconnect!
+        FileUtils.chmod(0o755, directory)
+        FileUtils.rm_rf(directory)
+      end
+
+      it { expect(adapter.select_value('SELECT count(*) FROM places')).to(eq(2)) }
+      it { expect(adapter.select_value('PRAGMA journal_mode')).to(eq('delete')) }
+    end
+
     context 'when duckdb fails' do
       let(:status) { instance_double(Process::Status, exitstatus: 1, success?: false) }
 

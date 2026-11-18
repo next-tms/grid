@@ -78,6 +78,8 @@ Google bills each Text Search by the most expensive field in the field mask. Gri
 
 Some providers read a SQLite file that ships in the Docker image, in `/usr/share/grid/`, instead of calling an API. Grid opens each file read-only as its own database. It does not import the rows into Postgres, and it never changes a file at runtime. Each file keeps the columns of its source, as the source names them.
 
+Each file uses the SQLite rollback journal, not WAL (write-ahead logging). A WAL file needs `-shm` and `-wal` files next to it, even for reads. The `grid` user cannot create files in `/usr/share/grid/`, so every query on a WAL file fails with `SQLite3::ReadOnlyException`. The schema sets `journal_mode = DELETE` when a build starts. `config/database.yml` sets the same mode for the read-only connections, because Rails asks for WAL on every SQLite connection by default.
+
 ## Overture Places File
 
 The Overture provider reads `/usr/share/grid/overture.sqlite3` through the `Overture::Place` model. The file keeps the Overture columns, for example `basic_category` and `operating_status`. It adds one column, `address_key`, with an index. It also has indexes for the `overturePlaces` search, from `Overture::Schema::INDEXES`. Grid finds the places at an address by this key: the first normalized address line, the postal code without a ZIP+4, and the country code, for example `1600 AMPHITHEATRE PKWY, 94043, US`.

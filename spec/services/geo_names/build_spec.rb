@@ -69,6 +69,30 @@ RSpec.describe(GeoNames::Build) do
       expect(GeoNames::PostalCode.connection_db_config.database).to(eq('tmp/geo_names_test.sqlite3'))
     end
 
+    context 'when the production configuration reads the file from a directory it cannot write' do
+      let(:adapter) { ActiveRecord::ConnectionAdapters::SQLite3Adapter.new(configuration) }
+      let(:configuration) do
+        Rails.application.config.database_configuration.dig('production', 'geo_names').merge('database' => path.to_s)
+      end
+      let(:directory) { Rails.root.join('tmp/geo_names_read_only') }
+      let(:path) { directory.join('geo_names.sqlite3') }
+
+      before do
+        FileUtils.mkdir_p(directory)
+        geo_names_build.call
+        FileUtils.chmod(0o555, directory)
+      end
+
+      after do
+        adapter.disconnect!
+        FileUtils.chmod(0o755, directory)
+        FileUtils.rm_rf(directory)
+      end
+
+      it { expect(adapter.select_value('SELECT count(*) FROM postal_codes')).to(eq(2)) }
+      it { expect(adapter.select_value('PRAGMA journal_mode')).to(eq('delete')) }
+    end
+
     context 'when unzip fails' do
       let(:status) { instance_double(Process::Status, exitstatus: 9, success?: false) }
 

@@ -2,6 +2,7 @@ module Overture
   module Schema
     class << self
       def define(connection)
+        connection.execute('PRAGMA journal_mode = DELETE')
         connection.create_table(:places, id: :string) do |t|
           t.string(:name, null: false)
           t.string(:basic_category)
