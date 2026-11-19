@@ -1,5 +1,6 @@
 module Overture
   class PlaceSearch
+    CLOSED = 'permanently_closed'.freeze
     LOCATION_INDEX = 'places INDEXED BY index_places_on_latitude_and_longitude'.freeze
     NOTHING = { id_null: true }.freeze
 
@@ -14,10 +15,17 @@ module Overture
 
     private
 
-    def conditions(filter)
-      groups = [freight_kit_condition(filter[:freight_kit_location_types_in]), or_condition(filter[:or])].compact
+    def closed_condition(closed)
+      return if closed.nil?
 
-      filter.except(:freight_kit_location_types_in, :or).merge(g: groups)
+      closed ? { operating_status_eq: CLOSED } : { operating_status_null: true, operating_status_not_eq: CLOSED, m: 'or' }
+    end
+
+    def conditions(filter)
+      groups = [freight_kit_condition(filter[:freight_kit_location_types_in]), closed_condition(filter[:permanently_closed]),
+                or_condition(filter[:or])].compact
+
+      filter.except(:freight_kit_location_types_in, :or, :permanently_closed).merge(g: groups)
     end
 
     def freight_kit_condition(names)

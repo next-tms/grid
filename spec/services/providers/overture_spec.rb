@@ -24,7 +24,35 @@ RSpec.describe(Providers::Overture) do
   end
 
   describe '.roles' do
-    it { expect(described_class.roles).to(eq(%i[business_details geocode verification])) }
+    it { expect(described_class.roles).to(eq(%i[business_details geocode place_search verification])) }
+  end
+
+  describe '.place' do
+    let(:place) { described_class.place(record) }
+    let(:record) { create(:overture_place, freeform: '1600 Amphitheatre Pkwy', id: 'overture-1', latitude: 37.42, longitude: -122.08) }
+
+    before { freeze_time }
+
+    it { expect(place).to(have_attributes(id: PlaceId.for('overture', 'overture-1'), name: 'Open Cafe', provider: 'overture')) }
+    it { expect(place).to(have_attributes(address_lines: ['1600 AMPHITHEATRE PKWY'], administrative_area: 'CA')) }
+    it { expect(place).to(have_attributes(postal_code: '94043', types: ['coffee_shop'])) }
+    it { expect(place).to(have_attributes(expires_at: 1.day.from_now, location: have_attributes(latitude: 37.42, longitude: -122.08))) }
+    it { expect(place).to(be_new_record) }
+  end
+
+  describe '.record_place' do
+    let(:id) { Struct.new(:provider, :value).new(nil, PlaceId.for('overture', 'overture-1')) }
+
+    before do
+      create(:country, iso3166_1_alpha2: 'US')
+      create(:overture_place, freeform: '1600 Amphitheatre Pkwy', id: 'overture-1')
+    end
+
+    it { expect(described_class.record_place(id)).to(have_attributes(id: id.value, name: 'Open Cafe')) }
+    it { expect(described_class.record_place(id)).to(be_persisted) }
+    it { expect(described_class.record_place(id.class.new('overture', 'overture-1'))).to(have_attributes(id: id.value)) }
+    it { expect(described_class.record_place(id.class.new('google', 'overture-1'))).to(be_nil) }
+    it { expect(described_class.record_place(id.class.new(nil, 'unknown'))).to(be_nil) }
   end
 
   describe '#call' do

@@ -32,6 +32,33 @@ RSpec.describe(Overture::PlaceSearch) do
       it { expect(search.call).to(be_empty) }
     end
 
+    context 'with a place type' do
+      let(:filter) { { type_eq: 'cafe' } }
+
+      before { create(:overture_place, id: 'overture-c', primary_category: 'cafe') }
+
+      it { expect(search.call.map(&:id)).to(eq(['overture-c'])) }
+    end
+
+    context 'with permanently closed places' do
+      let(:filter) { { permanently_closed: true } }
+
+      before { create(:overture_place, id: 'overture-c', operating_status: 'permanently_closed') }
+
+      it { expect(search.call.map(&:id)).to(eq(['overture-c'])) }
+    end
+
+    context 'without permanently closed places' do
+      let(:filter) { { permanently_closed: false } }
+
+      before do
+        create(:overture_place, id: 'overture-c', operating_status: 'permanently_closed')
+        create(:overture_place, id: 'overture-d', operating_status: 'open')
+      end
+
+      it { expect(search.call.map(&:id)).to(eq(['overture-a', 'overture-b', 'overture-d'])) }
+    end
+
     context 'with a box around a location' do
       let(:filter) { { latitude_gteq: 37, latitude_lteq: 38, longitude_gteq: -123, longitude_lteq: -122 } }
 

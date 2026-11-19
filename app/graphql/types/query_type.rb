@@ -18,8 +18,12 @@ module Types
       argument :id, Types::IdentifierInputType, required: true, description: 'The place ID.'
     end
 
-    field :fetch_places, [Types::PlaceType], null: true, description: 'Fetches the places at an address.' do
-      argument :address, Types::AddressInputType, required: true, description: 'The address.'
+    field :fetch_places, Types::PlaceType.connection_type, null: true, description: 'Fetches places by address or filter.' do
+      argument :address, Types::AddressInputType, required: false, description: 'The address.'
+      argument :filter, Types::PlaceFilterInputType, required: false, description: 'The conditions.'
+      argument :sort, [Types::PlaceSortType], required: false, description: 'The order of the places that match a filter.'
+
+      validates required: { one_of: %i[address filter] }
     end
 
     field :fetch_time_zone, Types::TimeZoneType, null: true, description: 'Fetches one time zone by address, IANA name, or location.' do
@@ -33,11 +37,6 @@ module Types
     field :fetch_time_zones, [Types::TimeZoneType], null: false, description: 'Searches tzdata.' do
       argument :name, String, required: false, description: 'Part of an IANA or Active Support name, or a tzdata abbreviation.'
       argument :region_code, String, required: false, description: 'The ISO 3166-1 alpha-2 country code.'
-    end
-
-    field :overture_places, Types::OverturePlaceType.connection_type, null: false, description: 'Searches the Overture places file.' do
-      argument :filter, Types::OverturePlaceFilterInputType, required: false, description: 'The conditions.'
-      argument :sort, [Types::OverturePlaceSortType], required: false, description: 'The order, before the Overture ID.'
     end
 
     field :verify_address, Types::AddressVerificationType, null: true, description: 'Verifies and geocodes a postal address.' do
@@ -55,13 +54,15 @@ module Types
     def fetch_countries(name: nil) = CountrySearch.new(name:).call
 
     def fetch_place(id:)
-      place = id.provider ? Place.identified_by(provider: id.provider, value: id.value).first : Place.find_by(id: id.value)
+      place = stored_place(id) || PlaceFilter.new.provider&.record_place(id)
       return if place.blank?
 
-      search_places(place.address).find { it.id == place.id }
+      search_places(place.address).find { it.id == place.id } || (place if place.stores_content?)
     end
 
-    def fetch_places(address:)
+    def fetch_places(address: nil, filter: nil, sort: [])
+      return filter_places(filter, sort) if address.blank?
+
       search_places(AddressValidator.new(AddressQuery.new(**address)).address)
     rescue ActiveRecord::RecordNotFound
       nil
@@ -77,12 +78,17 @@ module Types
 
     def fetch_time_zones(name: nil, region_code: nil) = TimeZoneSearch.new(name:, region_code:).call
 
-    def overture_places(filter: nil, sort: [])
-      raise(GraphQL::ExecutionError, 'The Overture places file is not available.') unless Overture::Place.available?
+    def verify_address(address:) = verify(address)
 
-      Overture::PlaceSearch.new(filter:, sort:).call
+    private
+
+    def filter_places(filter, sort)
+      search = PlaceFilter.new(filter:, sort:)
+      raise(GraphQL::ExecutionError, 'No provider can search places by filter.') if search.provider.blank?
+
+      Connections::ResolvedPlaceConnection.new(search.call, provider: search.provider)
     end
 
-    def verify_address(address:) = verify(address)
+    def stored_place(id) = id.provider ? Place.identified_by(provider: id.provider, value: id.value).first : Place.find_by(id: id.value)
   end
 end

@@ -11,6 +11,7 @@ Each adapter declares every role that its data supports, so any mix of enabled p
 | `business_details` | Place types and open or closed status | `GET /v1/places/{placeId}` |
 | `dock` | Whether the building has a loading dock | GraphQL `verifyAddress` only |
 | `geocode` | Latitude and longitude | `POST /v1:validateAddress` |
+| `place_search` | Places that match a filter, for example all restaurants in a state | GraphQL `fetchPlaces` with `filter` only |
 | `time_zone` | IANA time zone name and offsets | `GET /maps/api/timezone/json` |
 | `verification` | Standardized address, deliverability, residential or business | `POST /v1:validateAddress` |
 
@@ -48,7 +49,7 @@ When a provider returns its own ID for an address, Grid stores it in `provider_i
 | Smarty US Street API | `smarty` | US and territories | Street address, with the IANA time zone | `geocode`, `time_zone`, `verification` | `certified` | 90 days |
 | Smarty US ZIP Code API | `smarty` | US and territories | ZIP code to city, state, and coordinates | `geocode`, `verification` | `certified` | 90 days |
 | GeoNames | `geo_names` | All | Postal code to place and coordinates from the GeoNames file, and coordinates to time zone from the API or the file | `geocode`, `time_zone`, `verification` | `open_data` | 90 days |
-| Overture Maps Places | `overture` | US | Places at a street address, with their city, state, and coordinates | `business_details`, `geocode`, `verification` | `open_data` | 1 day |
+| Overture Maps Places | `overture` | US | Places at a street address, with their city, state, and coordinates | `business_details`, `geocode`, `place_search`, `verification` | `open_data` | 1 day |
 | OpenStreetMap Nominatim | `open_street_map` | All | Street address or postal code to coordinates, named businesses at the address, and loading docks | `business_details`, `dock`, `geocode` | `open_data` | 90 days |
 | Google Places API (New) Text Search | `google` | All | Places at a street address, with their coordinates | `business_details`, `geocode` | `commercial` | Place IDs only |
 
@@ -82,7 +83,7 @@ Each file uses the SQLite rollback journal, not WAL (write-ahead logging). A WAL
 
 ## Overture Places File
 
-The Overture provider reads `/usr/share/grid/overture.sqlite3` through the `Overture::Place` model. The file keeps the Overture columns, for example `basic_category` and `operating_status`. It adds one column, `address_key`, with an index. It also has indexes for the `overturePlaces` search, from `Overture::Schema::INDEXES`. Grid finds the places at an address by this key: the first normalized address line, the postal code without a ZIP+4, and the country code, for example `1600 AMPHITHEATRE PKWY, 94043, US`.
+The Overture provider reads `/usr/share/grid/overture.sqlite3` through the `Overture::Place` model. The file keeps the Overture columns, for example `basic_category` and `operating_status`. It adds two columns with indexes: `address_key`, and `grid_id`, the Grid place ID from `PlaceId`. It also has indexes for the `fetchPlaces` filter search, from `Overture::Schema::INDEXES`. Grid finds the places at an address by this key: the first normalized address line, the postal code without a ZIP+4, and the country code, for example `1600 AMPHITHEATRE PKWY, 94043, US`.
 
 Overture publishes the places as Parquet files, a column-based file format, on S3. Parquet has no index for a lookup by one address, and Overture has no normalized address key. So the build task uses the [DuckDB](https://duckdb.org) command line tool to read only the US rows and the columns that Grid needs. Then the task computes the key for each place and writes the rows to the file through ActiveRecord. DuckDB is necessary only to build the file, so it is not in the Docker image.
 

@@ -54,7 +54,7 @@ module Overture
       address_key = address_key(row)
       return if address_key.blank? || row['id'].blank? || row['name'].blank?
 
-      row.slice(*COLUMNS).merge('address_key' => address_key)
+      row.slice(*COLUMNS).merge('address_key' => address_key, 'grid_id' => PlaceId.for(Providers::Overture.key, row['id']))
     end
 
     def rows

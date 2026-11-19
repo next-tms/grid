@@ -26,7 +26,7 @@ RSpec.describe(Overture::Place) do
   end
 
   describe '.ransackable_attributes' do
-    it { expect(described_class.ransackable_attributes).to(include('administrative_area', 'postal_code', 'region_code')) }
+    it { expect(described_class.ransackable_attributes).to(include('administrative_area', 'postal_code', 'region_code', 'type')) }
     it { expect(described_class.ransackable_attributes).not_to(include('address_key')) }
   end
 
@@ -35,22 +35,17 @@ RSpec.describe(Overture::Place) do
     it { expect(build(:overture_place, freeform: '1600 Amphitheatre Pkwy').address_lines).to(eq(['1600 Amphitheatre Pkwy'])) }
   end
 
-  describe '#freight_kit_location_types' do
-    it { expect(overture_place.freight_kit_location_types).to(eq(['restaurant'])) }
-  end
+  describe '#address_query' do
+    subject(:overture_place) { build(:overture_place, freeform: '1600 Amphitheatre Pkwy', region: 'US-CA') }
 
-  describe '#location' do
-    it { expect(overture_place.location).to(be_nil) }
-
-    context 'with a point' do
-      subject(:overture_place) { build(:overture_place, latitude: 37.42, longitude: -122.08) }
-
-      it do
-        expect(overture_place.location).to(
-          eq(Location.new(authority: :open_data, granularity: 'PREMISE_PROXIMITY', latitude: 37.42, longitude: -122.08))
-        )
-      end
+    it do
+      expect(overture_place.address_query).to(
+        have_attributes(address_lines: ['1600 Amphitheatre Pkwy'], administrative_area: 'CA', locality: 'Mountain View',
+                        postal_code: '94043-1351', region_code: 'US')
+      )
     end
+
+    it { expect(AddressKey.for(overture_place.address_query)).to(eq(overture_place.address_key)) }
   end
 
   describe '#permanently_closed' do

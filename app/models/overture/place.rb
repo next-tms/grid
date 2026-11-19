@@ -2,7 +2,7 @@ module Overture
   class Place < Record
     class << self
       def ransackable_associations(_auth_object = nil) = []
-      def ransackable_attributes(_auth_object = nil) = [*column_names.excluding('address_key'), *_ransack_aliases.keys]
+      def ransackable_attributes(_auth_object = nil) = [*column_names.excluding('address_key', 'grid_id'), *_ransack_aliases.keys]
     end
 
     self.table_name = 'places'
@@ -11,16 +11,14 @@ module Overture
     ransack_alias :administrative_area, :region
     ransack_alias :postal_code, :postcode
     ransack_alias :region_code, :country
-
-    delegate :authority, to: Providers::Overture
+    ransack_alias :type, :basic_category_or_primary_category
 
     def address_lines = [freeform].compact
-    def freight_kit_location_types = FreightKitLocationTypes.for(Providers::Overture.key, types)
 
-    def location
-      return if latitude.blank? || longitude.blank?
+    def address_query
+      administrative_area = region.to_s.delete_prefix("#{country}-").presence
 
-      Location.new(authority:, granularity: 'PREMISE_PROXIMITY', latitude:, longitude:)
+      AddressQuery.new(address_lines:, administrative_area:, locality:, postal_code: postcode, region_code: country)
     end
 
     def permanently_closed = operating_status.presence && operating_status == 'permanently_closed'

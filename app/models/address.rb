@@ -45,11 +45,11 @@ class Address < ApplicationRecord
 
   def residential? = enabled_validations.where.not(residential: nil).order(fetched_at: :desc).pick(:residential) || false
 
-  def validation_for(provider, query = self.query)
+  def validation_for(provider, query = self.query, refresh: false)
     adapter = provider.new(query)
     return unless adapter.supports?
 
-    stored = validations.unexpired.where(provider: provider.key).order(:fetched_at).last if provider.stores_content?
+    stored = validations.unexpired.where(provider: provider.key).order(:fetched_at).last if provider.stores_content? && !refresh
     stored || adapter.call&.tap { record(it) }
   rescue Providers::Error => e
     Rails.logger.warn(e.message)
@@ -89,7 +89,7 @@ class Address < ApplicationRecord
   def record_place(validation, details)
     identifier = { provider: validation.provider, value: details.fetch(:provider_identifier) }
     content = details.except(:provider_identifier)
-    place = Place.identified_by(**identifier).first || places.build
+    place = Place.identified_by(**identifier).first || places.build(id: PlaceId.for(identifier[:provider], identifier[:value]))
 
     place.update!(**(validation.stores_content? ? content : Place::EMPTY_CONTENT), address: self, validation:)
     place.provider_identifiers.find_or_create_by!(identifier)

@@ -28,4 +28,41 @@ RSpec.describe(Place) do
     it { expect(place).to(have_attributes(authority: :certified, expires_at: place.validation.expires_at)) }
     it { expect(place).to(have_attributes(fetched_at: place.validation.fetched_at, provider: place.validation.provider)) }
   end
+
+  describe '#address_lines' do
+    it { expect(place.address_lines).to(eq(['1600 Amphitheatre Pkwy'])) }
+    it { expect(build(:place, validation: build(:validation, address_lines: [])).address_lines).to(eq(place.address.address_lines)) }
+  end
+
+  describe '#administrative_area' do
+    it { expect(place.administrative_area).to(eq(place.address.administrative_area.abbreviation)) }
+    it { expect(build(:place, validation: build(:validation, administrative_area: 'CA')).administrative_area).to(eq('CA')) }
+  end
+
+  describe '#fingerprint_source' do
+    it { expect(create(:place).then { it.fingerprint_source == it.validation }).to(be(true)) }
+    it { expect(place.fingerprint_source).to(include(place.id, 'Fake Cafe')) }
+  end
+
+  describe '#locality' do
+    it { expect(place.locality).to(eq(place.address.locality.name)) }
+  end
+
+  describe '#location' do
+    it { expect(place.location).to(be_nil) }
+
+    context 'with a geocode' do
+      subject(:place) { build(:place, validation: build(:validation, geocode_granularity: 'PREMISE', latitude: 37.42, longitude: -122.08)) }
+
+      it { expect(place.location).to(eq(Location.new(authority: :certified, granularity: 'PREMISE', latitude: 37.42, longitude: -122.08))) }
+    end
+  end
+
+  describe '#postal_code' do
+    it { expect(place.postal_code).to(eq(place.address.postal_code.value)) }
+  end
+
+  describe '#region_code' do
+    it { expect(place.region_code).to(eq('US')) }
+  end
 end

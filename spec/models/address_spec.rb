@@ -144,11 +144,13 @@ RSpec.describe(Address) do
     it { expect(address.validation_for(Providers::Fake, AddressQuery.new)).to(be_nil) }
 
     it { expect(address.validation_for(Providers::Fake, query).places.map(&:name)).to(contain_exactly('Fake Cafe', 'Fake Office')) }
+    it { expect(address.validation_for(Providers::Fake, query).places.map(&:id)).to(include(PlaceId.for('fake', 'fake-cafe'))) }
 
     context 'with an unexpired validation' do
       let!(:validation) { create(:validation, provider: 'fake', validatable: address) }
 
       it { expect(address.validation_for(Providers::Fake, query)).to(eq(validation)) }
+      it { expect(address.validation_for(Providers::Fake, query, refresh: true)).not_to(eq(validation)) }
     end
 
     context 'with an expired validation that has places' do

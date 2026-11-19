@@ -13,7 +13,7 @@ module Providers
 
     AUTHORITIES = %i[postal_operator government certified open_data commercial local].freeze
     COSTS = %i[free low medium high].freeze
-    ROLES = %i[business_details dock geocode time_zone verification].freeze
+    ROLES = %i[business_details dock geocode place_search time_zone verification].freeze
     TIMEOUT = 5
 
     attr_reader :query

@@ -12,5 +12,25 @@ class Place < ApplicationRecord
 
   validates :name, presence: true, if: -> { validation.present? && stores_content? }
 
+  def address_lines = validation.address_lines.presence || address&.address_lines.to_a
+  def administrative_area = validation.administrative_area || address&.administrative_area&.abbreviation
+
+  def fingerprint_source
+    return validation if validation.persisted?
+
+    [id, name, permanently_closed, types, validation.attributes.except('expires_at', 'fetched_at')]
+  end
+
   def freight_kit_location_types = FreightKitLocationTypes.for(provider, types)
+  def locality = validation.locality || address&.locality&.name
+
+  def location
+    return if validation.latitude.blank? || validation.longitude.blank?
+
+    Location.new(authority:, granularity: validation.geocode_granularity, latitude: validation.latitude.to_f,
+                 longitude: validation.longitude.to_f)
+  end
+
+  def postal_code = validation.postal_code || address&.postal_code&.value
+  def region_code = validation.region_code || address&.country&.region_code
 end

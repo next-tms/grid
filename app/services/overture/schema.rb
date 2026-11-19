@@ -16,6 +16,7 @@ module Overture
           t.float(:latitude)
           t.float(:longitude)
           t.string(:address_key, null: false, index: true)
+          t.string(:grid_id, null: false, index: { unique: true })
         end
         connection.create_table(:releases, id: false) do |t|
           t.string(:name, null: false)
@@ -31,7 +32,7 @@ module Overture
       def version = Digest::SHA256.hexdigest(FILES.map { Rails.root.join(it).read }.join)[0, 12]
     end
 
-    FILES = [*AddressKey::FILES, 'app/services/overture/schema.rb'].freeze
+    FILES = [*AddressKey::FILES, *PlaceId::FILES, 'app/services/overture/schema.rb'].freeze
     INDEXES = [%i[basic_category country region], %i[country postcode], %i[country region locality], %i[latitude longitude]].freeze
   end
 end

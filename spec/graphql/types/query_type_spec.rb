@@ -121,6 +121,34 @@ RSpec.describe(Types::QueryType) do
       it { expect(result).to(eq(data: { fetch_place: place })) }
     end
 
+    context 'with the Grid ID of a place that Grid did not store' do
+      let(:id) { PlaceId.for('overture', 'overture-1') }
+      let(:place_fields) { 'id name provider' }
+      let(:providers) { [Providers::Overture] }
+
+      before { create(:overture_place, address_key: '1 MAIN ST, 94043, US', freeform: '1 Main St', id: 'overture-1') }
+
+      it { expect(result).to(eq(data: { fetch_place: { id:, name: 'Open Cafe', provider: 'OVERTURE' } })) }
+      it { expect { result }.to(change(Place, :count).by(1)) }
+
+      it do
+        result
+
+        expect { execute(query, variables) }.not_to(change { [Address.count, Place.count, Validation.count] })
+      end
+    end
+
+    context 'with the provider ID of a place that Grid did not store' do
+      let(:id) { 'overture-1' }
+      let(:place_fields) { 'id' }
+      let(:provider) { 'OVERTURE' }
+      let(:providers) { [Providers::Overture] }
+
+      before { create(:overture_place, address_key: '1 MAIN ST, 94043, US', freeform: '1 Main St', id: 'overture-1') }
+
+      it { expect(result).to(eq(data: { fetch_place: { id: PlaceId.for('overture', 'overture-1') } })) }
+    end
+
     context 'with a provider ID' do
       let(:id) { 'fake-cafe' }
       let(:provider) { 'FAKE' }
@@ -143,21 +171,189 @@ RSpec.describe(Types::QueryType) do
   end
 
   describe 'fetchPlaces' do
-    let(:query) { "query($address: AddressInput!) { fetchPlaces(address: $address) { #{place_fields} } }" }
+    let(:query) { "query($address: AddressInput) { fetchPlaces(address: $address) { nodes { #{place_fields} } } }" }
     let(:variables) { { address: } }
 
-    it { expect(result.dig(:data, :fetch_places)).to(contain_exactly(cafe, include(name: 'Fake Office'))) }
+    it { expect(result.dig(:data, :fetch_places, :nodes)).to(contain_exactly(cafe, include(name: 'Fake Office'))) }
+
+    context 'with address fields' do
+      let(:place_fields) do
+        'addressId addressLines administrativeArea locality location { granularity latitude longitude } postalCode regionCode'
+      end
+
+      it do
+        expect(result.dig(:data, :fetch_places, :nodes, 0)).to(
+          eq(
+            address_id: Address.last.id,
+            address_lines: ['1600 AMPHITHEATRE PKWY'],
+            administrative_area: nil,
+            locality: nil,
+            location: { granularity: 'PREMISE', latitude: 37.42241, longitude: -122.08561 },
+            postal_code: '94043',
+            region_code: 'US'
+          )
+        )
+      end
+    end
 
     context 'with a ZIP code only' do
       let(:variables) { { address: { postalCode: '90012', regionCode: 'US' } } }
 
-      it { expect(result).to(eq(data: { fetch_places: [] })) }
+      it { expect(result).to(eq(data: { fetch_places: { nodes: [] } })) }
     end
 
     context 'with an unknown country' do
       let(:variables) { { address: { addressLines: ['1 Main St'], regionCode: 'ZZ' } } }
 
       it { expect(result).to(eq(data: { fetch_places: nil })) }
+    end
+
+    context 'with an address and a filter' do
+      let(:message) { 'fetchPlaces must include exactly one of the following arguments: address, filter.' }
+      let(:query) { 'query($address: AddressInput) { fetchPlaces(address: $address, filter: {}) { nodes { id } } }' }
+
+      it { expect(result.dig(:errors, 0, :message)).to(eq(message)) }
+    end
+
+    context 'with a filter' do
+      let(:names) { places.map { it[:name] } }
+      let(:place_fields) { 'name' }
+      let(:places) { result.dig(:data, :fetch_places, :nodes) }
+      let(:providers) { [Providers::Overture] }
+      let(:query) do
+        <<~GRAPHQL
+          query($after: String, $filter: PlaceFilterInput, $first: Int, $sort: [PlaceSort!]) {
+            fetchPlaces(after: $after, filter: $filter, first: $first, sort: $sort) {
+              totalCount
+              pageInfo { endCursor hasNextPage }
+              nodes { #{place_fields} }
+            }
+          }
+        GRAPHQL
+      end
+      let(:variables) { { filter: {} } }
+
+      before do
+        create(:overture_place, address_key: '1 MAIN ST, 94043, US', basic_category: 'coffee_shop', freeform: '1 Main St',
+                                id: 'overture-cafe', latitude: 37.42, longitude: -122.08, name: 'Open Cafe')
+        create(:overture_place, address_key: '1701 AIRPORT BLVD, 95110, US', basic_category: 'airport', freeform: '1701 Airport Blvd',
+                                id: 'overture-airport', locality: 'San Jose', name: 'San Jose Airport', postcode: '95110')
+        create(:overture_place, address_key: '2 CONGRESS AVE, 78701, US', basic_category: 'restaurant', freeform: '2 Congress Ave',
+                                id: 'overture-diner', name: 'Austin Diner', operating_status: 'permanently_closed', postcode: '78701',
+                                primary_category: 'diner', region: 'TX')
+      end
+
+      it { expect(names).to(eq(['San Jose Airport', 'Open Cafe', 'Austin Diner'])) }
+      it { expect(result.dig(:data, :fetch_places, :total_count)).to(eq(3)) }
+      it { expect { result }.not_to(change { [Address.count, Place.count, Validation.count] }) }
+
+      context 'with a stored place' do
+        let(:place_fields) { 'addressId id' }
+        let(:variables) { { filter: { nameEq: 'Open Cafe' } } }
+
+        before do
+          execute('query($id: IdentifierInput!) { fetchPlace(id: $id) { id } }', id: { value: PlaceId.for('overture', 'overture-cafe') })
+        end
+
+        it { expect(places).to(eq([{ address_id: Address.sole.id, id: PlaceId.for('overture', 'overture-cafe') }])) }
+      end
+
+      context 'with all place fields' do
+        let(:place) do
+          {
+            address_id: nil,
+            address_lines: ['1 MAIN ST'],
+            administrative_area: 'CA',
+            authority: 'OPEN_DATA',
+            freight_kit_location_types: ['RESTAURANT'],
+            id: PlaceId.for('overture', 'overture-cafe'),
+            locality: 'Mountain View',
+            location: { granularity: 'PREMISE_PROXIMITY', latitude: 37.42, longitude: -122.08 },
+            name: 'Open Cafe',
+            permanently_closed: nil,
+            postal_code: '94043',
+            provider: 'OVERTURE',
+            region_code: 'US',
+            types: ['coffee_shop']
+          }
+        end
+        let(:place_fields) do
+          'addressId addressLines administrativeArea authority freightKitLocationTypes id locality ' \
+            'location { granularity latitude longitude } name permanentlyClosed postalCode provider regionCode types'
+        end
+        let(:variables) { { filter: { nameEq: 'Open Cafe' } } }
+
+        it { expect(places).to(eq([place])) }
+      end
+
+      context 'with FreightKit location types and a state' do
+        let(:variables) { { filter: { administrativeAreaEq: 'CA', freightKitLocationTypesIn: ['RESTAURANT'] } } }
+
+        it { expect(names).to(eq(['Open Cafe'])) }
+      end
+
+      context 'with a FreightKit location type that no place has' do
+        let(:variables) { { filter: { freightKitLocationTypesIn: ['MOTEL'] } } }
+
+        it { expect(places).to(eq([])) }
+      end
+
+      context 'with a place type' do
+        let(:variables) { { filter: { typeIn: ['airport', 'diner'] } } }
+
+        it { expect(names).to(eq(['San Jose Airport', 'Austin Diner'])) }
+      end
+
+      context 'with permanently closed places' do
+        let(:variables) { { filter: { permanentlyClosed: true } } }
+
+        it { expect(names).to(eq(['Austin Diner'])) }
+      end
+
+      context 'without permanently closed places' do
+        let(:variables) { { filter: { permanentlyClosed: false } } }
+
+        it { expect(names).to(eq(['San Jose Airport', 'Open Cafe'])) }
+      end
+
+      context 'with OR filters' do
+        let(:variables) { { filter: { or: [{ localityEq: 'San Jose' }, { postalCodeStart: '787' }] } } }
+
+        it { expect(names).to(eq(['San Jose Airport', 'Austin Diner'])) }
+      end
+
+      context 'with a box around a location' do
+        let(:variables) { { filter: { latitudeGteq: 37, latitudeLteq: 38, longitudeGteq: -123, longitudeLteq: -122 } } }
+
+        it { expect(names).to(eq(['Open Cafe'])) }
+      end
+
+      context 'with a sort' do
+        let(:variables) { { filter: {}, sort: ['NAME_ASC'] } }
+
+        it { expect(names).to(eq(['Austin Diner', 'Open Cafe', 'San Jose Airport'])) }
+      end
+
+      context 'with pages' do
+        let(:page) { execute(query, filter: {}, first: 2) }
+        let(:variables) { { after: page.dig(:data, :fetch_places, :page_info, :end_cursor), filter: {}, first: 2 } }
+
+        it { expect(page.dig(:data, :fetch_places, :page_info, :has_next_page)).to(be(true)) }
+        it { expect(names).to(eq(['Austin Diner'])) }
+      end
+
+      context 'with a page that is too large' do
+        let(:variables) { { filter: {}, first: 1000 } }
+
+        it { expect(places.size).to(eq(3)) }
+        it { expect(GridSchema.default_max_page_size).to(eq(100)) }
+      end
+
+      context 'without a provider that searches places' do
+        before { allow(Overture::Place).to(receive(:available?).and_return(false)) }
+
+        it { expect(result[:errors]).to(contain_exactly(include(message: 'No provider can search places by filter.'))) }
+      end
     end
   end
 
@@ -263,112 +459,6 @@ RSpec.describe(Types::QueryType) do
     let(:variables) { { name: 'new york', regionCode: 'US' } }
 
     it { expect(result).to(eq(data: { fetch_time_zones: [{ id: 'America/New_York' }] })) }
-  end
-
-  describe 'overturePlaces' do
-    let(:query) do
-      <<~GRAPHQL
-        query($after: String, $filter: OverturePlaceFilterInput, $first: Int, $sort: [OverturePlaceSort!]) {
-          overturePlaces(after: $after, filter: $filter, first: $first, sort: $sort) {
-            nodes { #{place_fields} }
-            pageInfo { endCursor hasNextPage }
-            totalCount
-          }
-        }
-      GRAPHQL
-    end
-    let(:place_fields) { 'id' }
-    let(:places) { result.dig(:data, :overture_places, :nodes) }
-
-    before do
-      create(:overture_place, basic_category: 'coffee_shop', id: 'overture-cafe', latitude: 37.42, longitude: -122.08, name: 'Open Cafe')
-      create(:overture_place, basic_category: 'airport', id: 'overture-airport', locality: 'San Jose', name: 'San Jose Airport',
-                              postcode: '95110')
-      create(:overture_place, basic_category: 'restaurant', id: 'overture-diner', name: 'Austin Diner', postcode: '78701', region: 'TX')
-    end
-
-    it { expect(places).to(eq([{ id: 'overture-airport' }, { id: 'overture-cafe' }, { id: 'overture-diner' }])) }
-    it { expect(result.dig(:data, :overture_places, :total_count)).to(eq(3)) }
-
-    context 'with all place fields' do
-      let(:place) do
-        {
-          address_lines: [],
-          administrative_area: 'CA',
-          authority: 'OPEN_DATA',
-          basic_category: 'coffee_shop',
-          freight_kit_location_types: ['RESTAURANT'],
-          id: 'overture-cafe',
-          locality: 'Mountain View',
-          location: { granularity: 'PREMISE_PROXIMITY', latitude: 37.42, longitude: -122.08 },
-          name: 'Open Cafe',
-          operating_status: nil,
-          permanently_closed: nil,
-          postal_code: '94043-1351',
-          primary_category: nil,
-          region_code: 'US',
-          types: ['coffee_shop']
-        }
-      end
-      let(:place_fields) do
-        'addressLines administrativeArea authority basicCategory freightKitLocationTypes id locality ' \
-          'location { granularity latitude longitude } name operatingStatus permanentlyClosed postalCode primaryCategory regionCode types'
-      end
-      let(:variables) { { filter: { idEq: 'overture-cafe' } } }
-
-      it { expect(places).to(eq([place])) }
-    end
-
-    context 'with FreightKit location types and a state' do
-      let(:variables) { { filter: { administrativeAreaEq: 'CA', freightKitLocationTypesIn: ['RESTAURANT'] } } }
-
-      it { expect(places).to(eq([{ id: 'overture-cafe' }])) }
-    end
-
-    context 'with a FreightKit location type that Overture does not have' do
-      let(:variables) { { filter: { freightKitLocationTypesIn: ['MOTEL'] } } }
-
-      it { expect(places).to(eq([])) }
-    end
-
-    context 'with OR filters' do
-      let(:variables) { { filter: { or: [{ localityEq: 'San Jose' }, { postalCodeStart: '787' }] } } }
-
-      it { expect(places).to(eq([{ id: 'overture-airport' }, { id: 'overture-diner' }])) }
-    end
-
-    context 'with a box around a location' do
-      let(:variables) { { filter: { latitudeGteq: 37, latitudeLteq: 38, longitudeGteq: -123, longitudeLteq: -122 } } }
-
-      it { expect(places).to(eq([{ id: 'overture-cafe' }])) }
-    end
-
-    context 'with a sort' do
-      let(:variables) { { sort: ['NAME_DESC'] } }
-
-      it { expect(places).to(eq([{ id: 'overture-airport' }, { id: 'overture-cafe' }, { id: 'overture-diner' }])) }
-    end
-
-    context 'with pages' do
-      let(:page) { execute(query, first: 2) }
-      let(:variables) { { after: page.dig(:data, :overture_places, :page_info, :end_cursor), first: 2 } }
-
-      it { expect(page.dig(:data, :overture_places, :page_info, :has_next_page)).to(be(true)) }
-      it { expect(places).to(eq([{ id: 'overture-diner' }])) }
-    end
-
-    context 'with a page that is too large' do
-      let(:variables) { { first: 1000 } }
-
-      it { expect(places.size).to(eq(3)) }
-      it { expect(GridSchema.default_max_page_size).to(eq(100)) }
-    end
-
-    context 'without the Overture places file' do
-      before { allow(Overture::Place).to(receive(:available?).and_return(false)) }
-
-      it { expect(result[:errors]).to(contain_exactly(include(message: 'The Overture places file is not available.'))) }
-    end
   end
 
   describe 'verifyAddress' do

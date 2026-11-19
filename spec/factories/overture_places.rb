@@ -4,6 +4,7 @@ FactoryBot.define do
     address_key { '1600 AMPHITHEATRE PKWY, 94043, US' }
     basic_category { 'coffee_shop' }
     country { 'US' }
+    grid_id { PlaceId.for('overture', id) }
     locality { 'Mountain View' }
     name { 'Open Cafe' }
     postcode { '94043-1351' }

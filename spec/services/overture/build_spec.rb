@@ -51,6 +51,7 @@ RSpec.describe(Overture::Build) do
             'address_key' => '1600 AMPHITHEATRE PKWY, 94043, US',
             'basic_category' => 'coffee_shop',
             'freeform' => '1600 Amphitheatre Parkway',
+            'grid_id' => PlaceId.for('overture', 'place-1'),
             'id' => 'place-1',
             'latitude' => 37.42241,
             'name' => 'Open Cafe',
