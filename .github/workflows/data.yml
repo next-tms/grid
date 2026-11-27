@@ -27,7 +27,7 @@ jobs:
       built: ${{ steps.plan.outputs.builds != '' }}
     env:
       DATA_DIR: ${{ github.workspace }}/tmp/data
-      DATA_IMAGE: ghcr.io/next-tms/grid-data
+      DATA_IMAGE: ghcr.io/${{ github.repository }}-data
       DUCKDB_VERSION: 1.4.1
       GEO_NAMES_DATABASE: ${{ github.workspace }}/tmp/data/geo_names.sqlite3
       OVERTURE_DATABASE: ${{ github.workspace }}/tmp/data/overture.sqlite3
@@ -73,4 +73,3 @@ jobs:
     needs: build
     if: needs.build.outputs.built == 'true'
     uses: ./.github/workflows/push.yml
-    secrets: inherit
